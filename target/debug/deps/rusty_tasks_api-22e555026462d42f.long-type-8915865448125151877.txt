@@ -1,0 +1,8 @@
+From<time::format_description::parse::format_item::HourBase>
+From<time::format_description::parse::format_item::MonthCaseSensitive>
+From<time::format_description::parse::format_item::PeriodCase>
+From<time::format_description::parse::format_item::PeriodCaseSensitive>
+From<time::format_description::parse::format_item::SignBehavior>
+From<time::format_description::parse::format_item::WeekdayCaseSensitive>
+From<time::format_description::parse::format_item::WeekdayOneIndexed>
+From<time::format_description::parse::format_item::YearBase>
