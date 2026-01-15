@@ -1,1 +1,12 @@
+# Rust
+/target/
+
+# Environment
 .env
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
