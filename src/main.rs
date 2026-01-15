@@ -7,7 +7,6 @@ mod error;
 mod auth;
 mod models;
 mod routes;
-mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -20,11 +19,12 @@ async fn main() {
         .merge(routes::tasks::router())
         .with_state(db);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:9000")
+    .await
+    .unwrap();
 
-    println!("🚀 API running on http://localhost:8080");
+
+    println!("🚀 API running on http://localhost:9000");
 
     axum::serve(listener, app).await.unwrap();
 }

@@ -1,8 +1,8 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::NaiveDateTime;
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(sqlx::FromRow)]
 pub struct Task {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -11,12 +11,12 @@ pub struct Task {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct CreateTaskRequest {
     pub title: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct TaskResponse {
     pub id: Uuid,
     pub title: String,

@@ -1,11 +1,12 @@
 use axum::{
     async_trait,
-    extract::{FromRequestParts, TypedHeader},
+    extract::FromRequestParts,
     http::request::Parts,
 };
-use headers::{Authorization, authorization::Bearer};
-use crate::{auth::jwt, error::AppError};
+use headers::{Authorization, authorization::Bearer, HeaderMapExt};
 use uuid::Uuid;
+
+use crate::{auth::jwt, error::AppError};
 
 pub struct AuthUser {
     pub user_id: Uuid,
@@ -23,12 +24,12 @@ where
         parts: &mut Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let TypedHeader(Authorization(bearer)) =
-            TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, &())
-                .await
-                .map_err(|_| AppError::Unauthorized)?;
+        let auth = parts
+            .headers
+            .typed_get::<Authorization<Bearer>>()
+            .ok_or(AppError::Unauthorized)?;
 
-        let claims = jwt::verify_token(bearer.token());
+        let claims = jwt::verify_token(auth.token());
 
         Ok(AuthUser {
             user_id: claims.sub,

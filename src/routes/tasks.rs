@@ -1,13 +1,27 @@
 use axum::{
-    Router, Json, routing::{get, post},
+    Router,
+    Json,
+    routing::get,
     extract::{State, Query},
 };
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
 
 use crate::{
     auth::middleware::AuthUser,
-    models::task::{Task, CreateTaskRequest, TaskResponse},
+    models::task::{CreateTaskRequest, TaskResponse},
 };
+
+use chrono::NaiveDateTime;
+use uuid::Uuid;
+
+#[derive(FromRow)]
+struct Task {
+    id: Uuid,
+    user_id: Uuid,
+    title: String,
+    completed: bool,
+    created_at: NaiveDateTime,
+}
 
 #[derive(serde::Deserialize)]
 pub struct TaskQuery {
@@ -25,53 +39,53 @@ async fn list_tasks(
     auth: AuthUser,
     State(db): State<PgPool>,
     Query(q): Query<TaskQuery>,
-) -> Json<Vec<TaskResponse>> {
-    let page = q.page.unwrap_or(1);
-    let limit = q.limit.unwrap_or(10);
+) -> Result<Json<Vec<TaskResponse>>, axum::http::StatusCode> {
+    let page = q.page.unwrap_or(1).max(1);
+    let limit = q.limit.unwrap_or(10).min(100);
     let offset = (page - 1) * limit;
     let search = format!("%{}%", q.search.unwrap_or_default());
 
-    let tasks = sqlx::query_as!(
-        Task,
+    let tasks: Vec<Task> = sqlx::query_as(
         r#"
         SELECT id, user_id, title, completed, created_at
         FROM tasks
-        WHERE user_id = $1 AND title ILIKE $2
+        WHERE user_id = $1
+          AND title ILIKE $2
         ORDER BY created_at DESC
         LIMIT $3 OFFSET $4
-        "#,
-        auth.user_id,
-        search,
-        limit,
-        offset
+        "#
     )
+    .bind(auth.user_id)
+    .bind(search)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&db)
     .await
-    .unwrap();
+    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Json(
-        tasks.into_iter().map(|t| TaskResponse {
-            id: t.id,
-            title: t.title,
-            completed: t.completed,
-            created_at: t.created_at,
-        }).collect()
-    )
+    let response = tasks.into_iter().map(|t| TaskResponse {
+        id: t.id,
+        title: t.title,
+        completed: t.completed,
+        created_at: t.created_at,
+    }).collect();
+
+    Ok(Json(response))
 }
 
 async fn create_task(
     auth: AuthUser,
     State(db): State<PgPool>,
     Json(input): Json<CreateTaskRequest>,
-) -> Json<&'static str> {
-    sqlx::query!(
-        "INSERT INTO tasks (user_id, title) VALUES ($1, $2)",
-        auth.user_id,
-        input.title
+) -> Result<Json<&'static str>, axum::http::StatusCode> {
+    sqlx::query(
+        r#"INSERT INTO tasks (user_id, title) VALUES ($1, $2)"#
     )
+    .bind(auth.user_id)
+    .bind(input.title)
     .execute(&db)
     .await
-    .unwrap();
+    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Json("Task created")
+    Ok(Json("Task created"))
 }
